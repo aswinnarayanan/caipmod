@@ -5,21 +5,16 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path"
 	"strconv"
 	"strings"
 )
 
 func main() {
-	// err := godotenv.Load("global.start")
-	// if err != nil {
-	// 	log.Fatal("Error loading .env file")
-	// }
-	// DICOM_SERVER_NAME_2 := os.Getenv("DICOM_SERVER_NAME_2")
-	// fmt.Println(DICOM_SERVER_NAME_2)
+	e, _ := os.Executable()
+	fmt.Println(path.Dir(e))
 
-	//////////////////////////////////////////////////////////////
-
-	file, err := os.Open("global.start")
+	file, err := os.Open(path.Dir(e) + "/global.start")
 	if err != nil {
 		log.Fatal(err)
 	}
