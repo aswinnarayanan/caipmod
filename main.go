@@ -5,16 +5,21 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"os/user"
 	"path"
+	"regexp"
 	"strconv"
 	"strings"
 )
 
 func main() {
-	e, _ := os.Executable()
-	fmt.Println(path.Dir(e))
+	currentUser, _ := user.Current()
+	currentPath, _ := os.Executable()
 
-	file, err := os.Open(path.Dir(e) + "/global.start")
+	fmt.Println(currentUser.Username)
+	fmt.Println(path.Dir(currentPath))
+
+	file, err := os.Open(path.Dir(currentPath) + "/global.start")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -27,25 +32,32 @@ func main() {
 	var i int
 	var val string
 	var dbi int
+	var lines []string
 
 	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
+	file, err = os.Open(path.Dir(currentPath) + "/global.start")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer file.Close()
 
-		i, val = extractVal(scanner.Text(), "DATA_SOURCE_NOT_ACTIVE_")
+	for scanner.Scan() {
+		line := scanner.Text()
+		i, val = extractVal(line, "DATA_SOURCE_NOT_ACTIVE_")
 		if i > 0 {
 			DATA_SOURCE_NOT_ACTIVE[i] = val
 		}
-		i, val = extractVal(scanner.Text(), "DATA_BASE_CONNECTION_")
+		i, val = extractVal(line, "DATA_BASE_CONNECTION_")
 		if i > 0 {
 			DATA_BASE_CONNECTION[i] = val
 		}
-		i, val = extractVal(scanner.Text(), "DATA_BASE_PATH_")
+		i, val = extractVal(line, "DATA_BASE_PATH_")
 		if i > 0 {
 			DATA_BASE_PATH[i] = val
 		}
 	}
 
-	fmt.Printf("\n-------------------------\nFollowing Databases found\n-------------------------\n\n")
+	fmt.Printf("\n-------------------------\nFollowing databases found\n-------------------------\n\n")
 	for i := range DATA_SOURCE_NOT_ACTIVE {
 		// val, _ = strings.CutPrefix(DATA_BASE_CONNECTION[i], "jdbc\\:derby\\:")
 		fmt.Printf("[%d]\nDATA_BASE_CONNECTION = %s\nDATA_BASE_PATH = %s\n\n", i, DATA_BASE_CONNECTION[i], DATA_BASE_PATH[i])
@@ -56,11 +68,43 @@ func main() {
 	}
 
 	// Take input db
-	fmt.Print("-------------------\nEnter your database\n> ")
+	fmt.Print("-------------------\nEnter your database\n-------------------\n> ")
 	fmt.Scanf("%d", &dbi)
 
-	fmt.Printf("\n----------------------------\nUsing the following database\n\n")
+	fmt.Printf("\n----------------------------\nUsing the following database\n----------------------------\n\n")
 	fmt.Printf("[%d]\n%s\n%s\n\n", dbi, DATA_BASE_CONNECTION[dbi], DATA_BASE_PATH[dbi])
+
+	regex, _ := regexp.Compile("/winmounts/.*/data.cai.uq.edu.au/")
+	scanner = bufio.NewScanner(file)
+	for scanner.Scan() {
+		line := scanner.Text()
+		i, _ = extractVal(line, "DATA_SOURCE_NOT_ACTIVE_")
+		if i == dbi {
+			line = "DATA_SOURCE_NOT_ACTIVE_" + strconv.Itoa(i) + "=YES"
+		} else if i > 0 {
+			line = "DATA_SOURCE_NOT_ACTIVE_" + strconv.Itoa(i) + "=NO"
+		}
+		i, _ = extractVal(line, "DATA_BASE_CONNECTION_")
+		if i > 0 {
+			line = regex.ReplaceAllString(line, "/winmounts/"+currentUser.Username+"/data.cai.uq.edu.au/")
+		}
+		i, _ = extractVal(line, "DATA_BASE_PATH_")
+		if i > 0 {
+			line = regex.ReplaceAllString(line, "/winmounts/"+currentUser.Username+"/data.cai.uq.edu.au/")
+		}
+
+		fmt.Println(line)
+		lines = append(lines, line)
+	}
+	if err := scanner.Err(); err != nil {
+		log.Fatal(err)
+	}
+	modifiedContent := strings.Join(lines, "\n")
+	err = os.WriteFile("global.start", []byte(modifiedContent), 0644)
+	if err != nil {
+		log.Fatal(err)
+	}
+	file.Close()
 
 }
 
