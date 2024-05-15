@@ -79,9 +79,9 @@ func main() {
 	}
 
 	// Take input db
-	fmt.Println("\n----------------------")
-	fmt.Println("Enter your database(s)")
-	fmt.Println("----------------------")
+	fmt.Println("\n----------------------------------------------")
+	fmt.Println("Enter your database(s) or Enter to disable all")
+	fmt.Println("----------------------------------------------")
 	fmt.Print("> ")
 	dbinputs = GetInputSlice()
 	// fmt.Scanf("%d", &dbi)
@@ -148,7 +148,7 @@ func main() {
 	} else {
 		licenseflag = "-lsn[5652@10.153.130.133]"
 	}
-	fmt.Printf("Running license server %s", licenseflag)
+	fmt.Printf("\nRunning license server %s", licenseflag)
 
 	// Run Pmod
 	cmd := exec.Command("./java/jre/bin/java", "-Xmx62000M", "-jar", "pmod.jar", licenseflag)
