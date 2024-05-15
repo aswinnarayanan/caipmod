@@ -110,7 +110,7 @@ func main() {
 		log.Fatal(err)
 	}
 	modifiedContent := strings.Join(lines, "\n")
-	err = os.WriteFile("properties/global.start", []byte(modifiedContent), 0644)
+	err = os.WriteFile(path.Dir(currentPath) + "/properties/global.start", []byte(modifiedContent), 0644)
 	if err != nil {
 		log.Fatal(err)
 	}
