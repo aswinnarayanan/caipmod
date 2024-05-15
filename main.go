@@ -27,11 +27,9 @@ func main() {
 
 	var i int
 	var val string
-	// var dbi int
-	var dbinputs []int
+	var inputDbs []int
 	var license int
-	var licenseflag string
-	var lines []string
+	var licenseFlag string
 
 	// Take input license
 	fmt.Println()
@@ -41,29 +39,26 @@ func main() {
 	fmt.Print("[1] Basic\n[2] Human\n[3] Advanced\n> ")
 	fmt.Scanf("%d", &license)
 
-	file, err := os.Open(path.Dir(currentPath) + "/properties/global.start")
+	configRaw, err := os.ReadFile(path.Dir(currentPath) + "/properties/global.start")
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer file.Close()
-	scanner := bufio.NewScanner(file)
+	configLines := strings.Split(string(configRaw), "\n")
 
-	for scanner.Scan() {
-		line := scanner.Text()
-		i, val = extractVal(line, "DATA_SOURCE_NOT_ACTIVE_")
+	for _, configLine := range configLines {
+		i, val = ExtractVal(configLine, "DATA_SOURCE_NOT_ACTIVE_")
 		if i > 0 {
 			DATA_SOURCE_NOT_ACTIVE[i] = val
 		}
-		i, val = extractVal(line, "DATA_BASE_CONNECTION_")
+		i, val = ExtractVal(configLine, "DATA_BASE_CONNECTION_")
 		if i > 0 {
 			DATA_BASE_CONNECTION[i] = val
 		}
-		i, val = extractVal(line, "DATA_BASE_PATH_")
+		i, val = ExtractVal(configLine, "DATA_BASE_PATH_")
 		if i > 0 {
 			DATA_BASE_PATH[i] = val
 		}
 	}
-	file.Close()
 
 	fmt.Println("\n-------------------------")
 	fmt.Println("Following databases found")
@@ -74,84 +69,64 @@ func main() {
 		fmt.Printf("[%d] %s\n", i, DATA_BASE_PATH[i])
 	}
 
-	if err := scanner.Err(); err != nil {
-		log.Fatal(err)
-	}
-
-	// Take input db
+	// Get db(s) as input(s)
 	fmt.Println("\n----------------------------------------------")
 	fmt.Println("Enter your database(s) or Enter to disable all")
 	fmt.Println("----------------------------------------------")
 	fmt.Print("> ")
-	dbinputs = GetInputSlice()
-	// fmt.Scanf("%d", &dbi)
-	// fmt.Printf("[%d] %s\n\n", dbi, DATA_BASE_PATH[dbi])
+	inputDbs = GetInputSlice()
 
 	regex, _ := regexp.Compile("/winmounts/.*/data.cai.uq.edu.au/")
-
-	file, err = os.Open(path.Dir(currentPath) + "/properties/global.start")
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer file.Close()
 
 	fmt.Println("\n---------------------------")
 	fmt.Println("Modifying global.start file")
 	fmt.Println("---------------------------")
-	scanner = bufio.NewScanner(file)
-	for scanner.Scan() {
-		line := scanner.Text()
-
-		i, _ = extractVal(line, "DATA_SOURCE_NOT_ACTIVE_")
-		if slices.Contains(dbinputs, i) {
+	outputLines := []string{}
+	for _, configLine := range configLines {
+		outputLine := configLine
+		i, _ = ExtractVal(configLine, "DATA_SOURCE_NOT_ACTIVE_")
+		if slices.Contains(inputDbs, i) {
 			if _, err := os.Stat(DATA_BASE_PATH[i]); os.IsNotExist(err) {
-				fmt.Printf("(OFF) [%d] %s\n", i, DATA_BASE_PATH[i])
-				line = "DATA_SOURCE_NOT_ACTIVE_" + strconv.Itoa(i) + "=YES"
+				fmt.Printf("(OFF) [%d] %s (NOACCESS)\n", i, DATA_BASE_PATH[i])
+				outputLine = "DATA_SOURCE_NOT_ACTIVE_" + strconv.Itoa(i) + "=YES"
 			} else {
 				fmt.Printf("(ON)  [%d] %s\n", i, DATA_BASE_PATH[i])
-				line = "DATA_SOURCE_NOT_ACTIVE_" + strconv.Itoa(i) + "=NO"
+				outputLine = "DATA_SOURCE_NOT_ACTIVE_" + strconv.Itoa(i) + "=NO"
 			}
 
 		} else if i > 0 {
 			fmt.Printf("(OFF) [%d] %s\n", i, DATA_BASE_PATH[i])
-			line = "DATA_SOURCE_NOT_ACTIVE_" + strconv.Itoa(i) + "=YES"
+			outputLine = "DATA_SOURCE_NOT_ACTIVE_" + strconv.Itoa(i) + "=YES"
 		}
 
-		i, _ = extractVal(line, "DATA_BASE_CONNECTION_")
+		i, _ = ExtractVal(configLine, "DATA_BASE_CONNECTION_")
 		if i > 0 {
-			line = regex.ReplaceAllString(line, "/winmounts/"+currentUser.Username+"/data.cai.uq.edu.au/")
+			outputLine = regex.ReplaceAllString(configLine, "/winmounts/"+currentUser.Username+"/data.cai.uq.edu.au/")
 		}
-		i, _ = extractVal(line, "DATA_BASE_PATH_")
+		i, _ = ExtractVal(configLine, "DATA_BASE_PATH_")
 		if i > 0 {
-			line = regex.ReplaceAllString(line, "/winmounts/"+currentUser.Username+"/data.cai.uq.edu.au/")
+			outputLine = regex.ReplaceAllString(configLine, "/winmounts/"+currentUser.Username+"/data.cai.uq.edu.au/")
 		}
-
-		// fmt.Println(line)
-		lines = append(lines, line)
+		outputLines = append(outputLines, outputLine)
 	}
-	// lines = append(lines, "\n")
-	if err := scanner.Err(); err != nil {
-		log.Fatal(err)
-	}
-	modifiedContent := strings.Join(lines, "\n")
-	err = os.WriteFile(path.Dir(currentPath)+"/properties/global.start", []byte(modifiedContent), 0644)
+	outputRaw := strings.Join(outputLines, "\n")
+	err = os.WriteFile(path.Dir(currentPath)+"/properties/global.start", []byte(outputRaw), 0644)
 	if err != nil {
 		log.Fatal(err)
 	}
-	file.Close()
 
 	// Choose license server
 	if license == 2 {
-		licenseflag = "-lsn[5653@10.153.130.133]"
+		licenseFlag = "-lsn[5653@10.153.130.133]"
 	} else if license == 3 {
-		licenseflag = "-lsn[5654@10.153.130.133]"
+		licenseFlag = "-lsn[5654@10.153.130.133]"
 	} else {
-		licenseflag = "-lsn[5652@10.153.130.133]"
+		licenseFlag = "-lsn[5652@10.153.130.133]"
 	}
-	fmt.Printf("\nRunning license server %s", licenseflag)
+	fmt.Printf("\nRunning license server %s", licenseFlag)
 
 	// Run Pmod
-	cmd := exec.Command("./java/jre/bin/java", "-Xmx62000M", "-jar", "pmod.jar", licenseflag)
+	cmd := exec.Command("./java/jre/bin/java", "-Xmx62000M", "-jar", "pmod.jar", licenseFlag)
 	cmd.Dir = path.Dir(currentPath)
 	out, err := cmd.Output()
 	if err != nil {
@@ -161,7 +136,7 @@ func main() {
 	fmt.Println(output)
 }
 
-func extractVal(line string, prefix string) (i int, val string) {
+func ExtractVal(line string, prefix string) (i int, val string) {
 	var s string
 	i = 0
 	val = ""
@@ -174,7 +149,7 @@ func extractVal(line string, prefix string) (i int, val string) {
 	return i, val
 }
 
-func numbers(s string) []int {
+func Numbers(s string) []int {
 	var n []int
 	for _, f := range strings.Fields(s) {
 		i, err := strconv.Atoi(f)
@@ -188,5 +163,5 @@ func numbers(s string) []int {
 func GetInputSlice() []int {
 	scanner := bufio.NewScanner(os.Stdin)
 	scanner.Scan()
-	return numbers(scanner.Text())
+	return Numbers(scanner.Text())
 }
