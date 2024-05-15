@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"os/user"
+	"os/exec"
 	"path"
 	"regexp"
 	"strconv"
@@ -26,8 +27,15 @@ func main() {
 	var i int
 	var val string
 	var dbi int
+	var license int
+	var licenseflag string
 	var lines []string
 
+	// Take input license
+	fmt.Print("-------------------\nEnter your license\n-------------------\n")
+	fmt.Print("[1] Basic\n[2] Human\n[3] Advanced\n> ")
+	fmt.Scanf("%d", &license)
+	
 	file, err := os.Open(path.Dir(currentPath) + "/properties/global.start")
 	if err != nil {
 		log.Fatal(err)
@@ -107,6 +115,23 @@ func main() {
 		log.Fatal(err)
 	}
 	file.Close()
+	 
+ 	if license == 2 {
+	  licenseflag = "-lsn[5653@10.153.130.133]"
+	} else if license == 3 {
+	  licenseflag = "-lsn[5654@10.153.130.133]"
+	} else {
+	  licenseflag = "-lsn[5652@10.153.130.133]"
+	}
+	  
+	fmt.Printf("Running license server %s", licenseflag)
+	
+	out, err := exec.Command(path.Dir(currentPath) + "/java/jre/bin/java", "-Xmx62000M", "-jar", path.Dir(currentPath) + "/pmod.jar", licenseflag).Output()
+	if err != nil {
+	    fmt.Printf("%s", err)
+	}
+	output := string(out[:])
+	fmt.Println(output)
 }
 
 func extractVal(line string, prefix string) (i int, val string) {
