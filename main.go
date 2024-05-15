@@ -109,7 +109,7 @@ func main() {
 	if err := scanner.Err(); err != nil {
 		log.Fatal(err)
 	}
-	modifiedContent := strings.Join(lines, "\n")
+	// modifiedContent := strings.Join(lines, "\n")
 	err = os.WriteFile("properties/global.start", []byte(modifiedContent), 0644)
 	if err != nil {
 		log.Fatal(err)
