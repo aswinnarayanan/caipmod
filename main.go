@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"golang.org/x/sys/unix"
 	"log"
 	"os"
 	"os/exec"
@@ -86,7 +87,8 @@ func main() {
 		outputLine := configLine
 		i, _ = ExtractVal(configLine, "DATA_SOURCE_NOT_ACTIVE_")
 		if slices.Contains(inputDbs, i) {
-			if _, err := os.Stat(DATA_BASE_PATH[i]); os.IsNotExist(err) {
+			// if _, err := os.Stat(DATA_BASE_PATH[i]); os.IsNotExist(err) {
+			if unix.Access(DATA_BASE_PATH[i], unix.R_OK) != nil {
 				fmt.Printf("(OFF) [%d] %s (NOACCESS)\n", i, DATA_BASE_PATH[i])
 				outputLine = "DATA_SOURCE_NOT_ACTIVE_" + strconv.Itoa(i) + "=YES"
 			} else {
