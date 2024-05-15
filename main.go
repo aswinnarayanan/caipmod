@@ -89,9 +89,9 @@ func main() {
 		line := scanner.Text()
 		i, _ = extractVal(line, "DATA_SOURCE_NOT_ACTIVE_")
 		if i == dbi {
-			line = "DATA_SOURCE_NOT_ACTIVE_" + strconv.Itoa(i) + "=YES"
-		} else if i > 0 {
 			line = "DATA_SOURCE_NOT_ACTIVE_" + strconv.Itoa(i) + "=NO"
+		} else if i > 0 {
+			line = "DATA_SOURCE_NOT_ACTIVE_" + strconv.Itoa(i) + "=YES"
 		}
 		i, _ = extractVal(line, "DATA_BASE_CONNECTION_")
 		if i > 0 {
@@ -126,7 +126,9 @@ func main() {
 	  
 	fmt.Printf("Running license server %s", licenseflag)
 	
-	out, err := exec.Command(path.Dir(currentPath) + "/java/jre/bin/java", "-Xmx62000M", "-jar", path.Dir(currentPath) + "/pmod.jar", licenseflag).Output()
+	cmd := exec.Command("./java/jre/bin/java", "-Xmx62000M", "-jar", "pmod.jar", licenseflag)
+	cmd.Dir = path.Dir(currentPath)
+	out, err := cmd.Output()
 	if err != nil {
 	    fmt.Printf("%s", err)
 	}
