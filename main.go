@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"os/user"
 	"os/exec"
+	"os/user"
 	"path"
 	"regexp"
 	"strconv"
@@ -27,15 +27,19 @@ func main() {
 	var i int
 	var val string
 	var dbi int
+	var dbinputs []int
 	var license int
 	var licenseflag string
 	var lines []string
 
 	// Take input license
-	fmt.Print("-------------------\nEnter your license\n-------------------\n")
+	fmt.Println()
+	fmt.Println("------------------")
+	fmt.Println("Enter your license")
+	fmt.Println("------------------")
 	fmt.Print("[1] Basic\n[2] Human\n[3] Advanced\n> ")
 	fmt.Scanf("%d", &license)
-	
+
 	file, err := os.Open(path.Dir(currentPath) + "/properties/global.start")
 	if err != nil {
 		log.Fatal(err)
@@ -60,10 +64,13 @@ func main() {
 	}
 	file.Close()
 
-	fmt.Printf("\n-------------------------\nFollowing databases found\n-------------------------\n\n")
+	fmt.Println("\n-------------------------")
+	fmt.Println("Following databases found")
+	fmt.Println("-------------------------")
 	for i := range DATA_SOURCE_NOT_ACTIVE {
 		// val, _ = strings.CutPrefix(DATA_BASE_CONNECTION[i], "jdbc\\:derby\\:")
-		fmt.Printf("[%d]\nDATA_BASE_CONNECTION = %s\nDATA_BASE_PATH = %s\n\n", i, DATA_BASE_CONNECTION[i], DATA_BASE_PATH[i])
+		// fmt.Printf("[%d]\nDATA_BASE_CONNECTION = %s\nDATA_BASE_PATH = %s\n\n", i, DATA_BASE_CONNECTION[i], DATA_BASE_PATH[i])
+		fmt.Printf("[%d] %s\n", i, DATA_BASE_PATH[i])
 	}
 
 	if err := scanner.Err(); err != nil {
@@ -71,14 +78,20 @@ func main() {
 	}
 
 	// Take input db
-	fmt.Print("-------------------\nEnter your database\n-------------------\n> ")
-	fmt.Scanf("%d", &dbi)
+	fmt.Println("\n----------------------")
+	fmt.Println("Enter your database(s)")
+	fmt.Println("----------------------")
+	fmt.Print("> ")
+	dbinputs = GetInputSlice()
+	// fmt.Scanf("%d", &dbi)
 
-	fmt.Printf("\n----------------------------\nUsing the following database\n----------------------------\n\n")
-	fmt.Printf("[%d]\n%s\n%s\n\n", dbi, DATA_BASE_CONNECTION[dbi], DATA_BASE_PATH[dbi])
+	fmt.Println("\n----------------------------")
+	fmt.Println("Using the following database")
+	fmt.Println("----------------------------")
+	fmt.Printf("[%d] %s\n\n", dbi, DATA_BASE_PATH[dbi])
 
 	regex, _ := regexp.Compile("/winmounts/.*/data.cai.uq.edu.au/")
-	
+
 	file, err = os.Open(path.Dir(currentPath) + "/properties/global.start")
 	if err != nil {
 		log.Fatal(err)
@@ -87,12 +100,14 @@ func main() {
 	scanner = bufio.NewScanner(file)
 	for scanner.Scan() {
 		line := scanner.Text()
+
 		i, _ = extractVal(line, "DATA_SOURCE_NOT_ACTIVE_")
 		if i == dbi {
 			line = "DATA_SOURCE_NOT_ACTIVE_" + strconv.Itoa(i) + "=NO"
 		} else if i > 0 {
 			line = "DATA_SOURCE_NOT_ACTIVE_" + strconv.Itoa(i) + "=YES"
 		}
+
 		i, _ = extractVal(line, "DATA_BASE_CONNECTION_")
 		if i > 0 {
 			line = regex.ReplaceAllString(line, "/winmounts/"+currentUser.Username+"/data.cai.uq.edu.au/")
@@ -110,27 +125,28 @@ func main() {
 		log.Fatal(err)
 	}
 	modifiedContent := strings.Join(lines, "\n")
-	err = os.WriteFile(path.Dir(currentPath) + "/properties/global.start", []byte(modifiedContent), 0644)
+	err = os.WriteFile(path.Dir(currentPath)+"/properties/global.start", []byte(modifiedContent), 0644)
 	if err != nil {
 		log.Fatal(err)
 	}
 	file.Close()
-	 
- 	if license == 2 {
-	  licenseflag = "-lsn[5653@10.153.130.133]"
+
+	// Choose license server
+	if license == 2 {
+		licenseflag = "-lsn[5653@10.153.130.133]"
 	} else if license == 3 {
-	  licenseflag = "-lsn[5654@10.153.130.133]"
+		licenseflag = "-lsn[5654@10.153.130.133]"
 	} else {
-	  licenseflag = "-lsn[5652@10.153.130.133]"
+		licenseflag = "-lsn[5652@10.153.130.133]"
 	}
-	  
 	fmt.Printf("Running license server %s", licenseflag)
-	
+
+	// Run Pmod
 	cmd := exec.Command("./java/jre/bin/java", "-Xmx62000M", "-jar", "pmod.jar", licenseflag)
 	cmd.Dir = path.Dir(currentPath)
 	out, err := cmd.Output()
 	if err != nil {
-	    fmt.Printf("%s", err)
+		fmt.Printf("%s", err)
 	}
 	output := string(out[:])
 	fmt.Println(output)
@@ -147,4 +163,21 @@ func extractVal(line string, prefix string) (i int, val string) {
 		i, _ = strconv.Atoi(s)
 	}
 	return i, val
+}
+
+func numbers(s string) []int {
+	var n []int
+	for _, f := range strings.Fields(s) {
+		i, err := strconv.Atoi(f)
+		if err == nil {
+			n = append(n, i)
+		}
+	}
+	return n
+}
+
+func GetInputSlice() []int {
+	scanner := bufio.NewScanner(os.Stdin)
+	scanner.Scan()
+	return numbers(scanner.Text())
 }
