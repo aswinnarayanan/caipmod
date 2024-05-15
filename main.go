@@ -9,6 +9,7 @@ import (
 	"os/user"
 	"path"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 )
@@ -26,7 +27,7 @@ func main() {
 
 	var i int
 	var val string
-	var dbi int
+	// var dbi int
 	var dbinputs []int
 	var license int
 	var licenseflag string
@@ -84,11 +85,7 @@ func main() {
 	fmt.Print("> ")
 	dbinputs = GetInputSlice()
 	// fmt.Scanf("%d", &dbi)
-
-	fmt.Println("\n----------------------------")
-	fmt.Println("Using the following database")
-	fmt.Println("----------------------------")
-	fmt.Printf("[%d] %s\n\n", dbi, DATA_BASE_PATH[dbi])
+	// fmt.Printf("[%d] %s\n\n", dbi, DATA_BASE_PATH[dbi])
 
 	regex, _ := regexp.Compile("/winmounts/.*/data.cai.uq.edu.au/")
 
@@ -97,14 +94,26 @@ func main() {
 		log.Fatal(err)
 	}
 	defer file.Close()
+
+	fmt.Println("\n---------------------------")
+	fmt.Println("Modifying global.start file")
+	fmt.Println("---------------------------")
 	scanner = bufio.NewScanner(file)
 	for scanner.Scan() {
 		line := scanner.Text()
 
 		i, _ = extractVal(line, "DATA_SOURCE_NOT_ACTIVE_")
-		if i == dbi {
-			line = "DATA_SOURCE_NOT_ACTIVE_" + strconv.Itoa(i) + "=NO"
+		if slices.Contains(dbinputs, i) {
+			if _, err := os.Stat(DATA_BASE_PATH[i]); os.IsNotExist(err) {
+				fmt.Printf("(OFF) [%d] %s\n", i, DATA_BASE_PATH[i])
+				line = "DATA_SOURCE_NOT_ACTIVE_" + strconv.Itoa(i) + "=YES"
+			} else {
+				fmt.Printf("(ON)  [%d] %s\n", i, DATA_BASE_PATH[i])
+				line = "DATA_SOURCE_NOT_ACTIVE_" + strconv.Itoa(i) + "=NO"
+			}
+
 		} else if i > 0 {
+			fmt.Printf("(OFF) [%d] %s\n", i, DATA_BASE_PATH[i])
 			line = "DATA_SOURCE_NOT_ACTIVE_" + strconv.Itoa(i) + "=YES"
 		}
 
