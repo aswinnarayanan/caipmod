@@ -19,12 +19,6 @@ func main() {
 	fmt.Println(currentUser.Username)
 	fmt.Println(path.Dir(currentPath))
 
-	file, err := os.Open(path.Dir(currentPath) + "/global.start")
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer file.Close()
-
 	var DATA_SOURCE_NOT_ACTIVE = make(map[int]string)
 	var DATA_BASE_CONNECTION = make(map[int]string)
 	var DATA_BASE_PATH = make(map[int]string)
@@ -34,12 +28,12 @@ func main() {
 	var dbi int
 	var lines []string
 
-	scanner := bufio.NewScanner(file)
-	file, err = os.Open(path.Dir(currentPath) + "/global.start")
+	file, err := os.Open(path.Dir(currentPath) + "/properties/global.start")
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer file.Close()
+	scanner := bufio.NewScanner(file)
 
 	for scanner.Scan() {
 		line := scanner.Text()
@@ -56,6 +50,7 @@ func main() {
 			DATA_BASE_PATH[i] = val
 		}
 	}
+	file.Close()
 
 	fmt.Printf("\n-------------------------\nFollowing databases found\n-------------------------\n\n")
 	for i := range DATA_SOURCE_NOT_ACTIVE {
@@ -75,6 +70,12 @@ func main() {
 	fmt.Printf("[%d]\n%s\n%s\n\n", dbi, DATA_BASE_CONNECTION[dbi], DATA_BASE_PATH[dbi])
 
 	regex, _ := regexp.Compile("/winmounts/.*/data.cai.uq.edu.au/")
+	
+	file, err = os.Open(path.Dir(currentPath) + "/properties/global.start")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer file.Close()
 	scanner = bufio.NewScanner(file)
 	for scanner.Scan() {
 		line := scanner.Text()
@@ -93,19 +94,19 @@ func main() {
 			line = regex.ReplaceAllString(line, "/winmounts/"+currentUser.Username+"/data.cai.uq.edu.au/")
 		}
 
-		fmt.Println(line)
+		// fmt.Println(line)
 		lines = append(lines, line)
 	}
+	lines = append(lines, "\n")
 	if err := scanner.Err(); err != nil {
 		log.Fatal(err)
 	}
 	modifiedContent := strings.Join(lines, "\n")
-	err = os.WriteFile("global.start", []byte(modifiedContent), 0644)
+	err = os.WriteFile("properties/global.start", []byte(modifiedContent), 0644)
 	if err != nil {
 		log.Fatal(err)
 	}
 	file.Close()
-
 }
 
 func extractVal(line string, prefix string) (i int, val string) {
