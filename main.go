@@ -3,7 +3,6 @@ package main
 import (
 	"bufio"
 	"fmt"
-	"golang.org/x/sys/unix"
 	"log"
 	"os"
 	"os/exec"
@@ -13,6 +12,8 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+
+	"golang.org/x/sys/unix"
 )
 
 func main() {
@@ -64,11 +65,25 @@ func main() {
 	fmt.Println("\n-------------------------")
 	fmt.Println("Following databases found")
 	fmt.Println("-------------------------")
+
+	noaccessDbs := []string{}
+	accessDbs := []string{}
 	for i := range DATA_SOURCE_NOT_ACTIVE {
 		// val, _ = strings.CutPrefix(DATA_BASE_CONNECTION[i], "jdbc\\:derby\\:")
 		// fmt.Printf("[%d]\nDATA_BASE_CONNECTION = %s\nDATA_BASE_PATH = %s\n\n", i, DATA_BASE_CONNECTION[i], DATA_BASE_PATH[i])
-		fmt.Printf("[%d] %s\n", i, DATA_BASE_PATH[i])
+		// fmt.Printf("[%d] %s\n", i, DATA_BASE_PATH[i])
+		if unix.Access(DATA_BASE_PATH[i], unix.R_OK) == nil {
+			accessDbs = append(noaccessDbs, "["+strconv.Itoa(i)+"] "+DATA_BASE_PATH[i])
+		} else {
+			noaccessDbs = append(accessDbs, "["+strconv.Itoa(i)+"] "+DATA_BASE_PATH[i])
+		}
+
 	}
+	fmt.Println("\nFollowing databases are accessible")
+	fmt.Println(strings.Join(accessDbs, "\n"))
+
+	fmt.Println("\nFollowing databases are not accessible")
+	fmt.Println(strings.Join(noaccessDbs, "\n"))
 
 	// Get db(s) as input(s)
 	fmt.Println("\n----------------------------------------------")
@@ -88,13 +103,14 @@ func main() {
 		i, _ = ExtractVal(configLine, "DATA_SOURCE_NOT_ACTIVE_")
 		if slices.Contains(inputDbs, i) {
 			// if _, err := os.Stat(DATA_BASE_PATH[i]); os.IsNotExist(err) {
-			if unix.Access(DATA_BASE_PATH[i], unix.R_OK) != nil {
-				fmt.Printf("(OFF) [%d] %s (NOACCESS)\n", i, DATA_BASE_PATH[i])
-				outputLine = "DATA_SOURCE_NOT_ACTIVE_" + strconv.Itoa(i) + "=YES"
-			} else {
-				fmt.Printf("(ON)  [%d] %s\n", i, DATA_BASE_PATH[i])
-				outputLine = "DATA_SOURCE_NOT_ACTIVE_" + strconv.Itoa(i) + "=NO"
-			}
+			outputLine = "DATA_SOURCE_NOT_ACTIVE_" + strconv.Itoa(i) + "=NO"
+			// if unix.Access(DATA_BASE_PATH[i], unix.R_OK) == nil {
+			// 	fmt.Printf("(ON)  [%d] %s\n", i, DATA_BASE_PATH[i])
+			// 	outputLine = "DATA_SOURCE_NOT_ACTIVE_" + strconv.Itoa(i) + "=NO"
+			// } else {
+			// 	fmt.Printf("(OFF) [%d] %s (NOACCESS)\n", i, DATA_BASE_PATH[i])
+			// 	outputLine = "DATA_SOURCE_NOT_ACTIVE_" + strconv.Itoa(i) + "=YES"
+			// }
 
 		} else if i > 0 {
 			fmt.Printf("(OFF) [%d] %s\n", i, DATA_BASE_PATH[i])
